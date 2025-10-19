@@ -221,7 +221,7 @@
         results.innerHTML = "<p style='text-align:center;'>No pools found.</p>";
         return;
       }
-      const collectFeeModes = { 0: "Base Token", 1: "Quote Token", 2: "Both" };
+      const collectFeeModes = { 0: "Base + Quote Token", 1: "Quote Token", };
 
       results.innerHTML = pools.map(pool => `
         <div class="pool">
