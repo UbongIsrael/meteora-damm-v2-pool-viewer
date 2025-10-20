@@ -138,6 +138,48 @@
       font-size: 12px;
       margin-left: 5px;
     }
+    .button-group {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+      flex-wrap: wrap;
+    }
+
+    .action-btn {
+      background: var(--bright-orange);
+      color: white;
+      padding: 8px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.2s;
+    }
+    .action-btn img {
+      width: 18px;
+      height: 18px;
+      display: inline-block;
+    }
+
+
+    .action-btn:hover {
+      background: var(--orange);
+    }
+
+    .action-btn.axiom span {
+      font-size: 15px;
+    }
+
+    .action-btn.meteora span {
+      font-size: 15px;
+    }
+
+    .action-btn.telegram span {
+      font-size: 15px;
+    }
+
 
     footer {
       text-align: center;
@@ -168,7 +210,7 @@
 </head>
 <body>
   <header>
-    <h1>Meteora Pool Viewer</h1>
+    <h1>Meteora DAMM V2 Viewer</h1>
   </header>
 
   <form id="form">
@@ -215,13 +257,18 @@
       const res = await fetch(url, options);
       return res.json();
     }
+    function shortenAddress(addr) {
+      if (!addr || addr.length < 10) return addr;
+      return addr.slice(0, 5) + '...' + addr.slice(-3);
+    }
+
 
     function renderPools(pools) {
       if (!pools.length) {
         results.innerHTML = "<p style='text-align:center;'>No pools found.</p>";
         return;
       }
-      const collectFeeModes = { 0: "Base + Quote Token", 1: "Quote Token", };
+      const collectFeeModes = { 0: "Base + Quote Token", 1: "Quote Token" };
 
       results.innerHTML = pools.map(pool => `
         <div class="pool">
@@ -230,16 +277,29 @@
             <span class="copy-address" data-address="${pool.pool_address}">${pool.pool_address}</span>
             <span class="copied" style="display:none;">Copied!</span>
           </p>
-          <p><strong>Creator:</strong> ${pool.creator}</p>
+          <p><strong>Creator:</strong> ${shortenAddress(pool.creator)}</p>
           <p><strong>TVL:</strong> $${pool.tvl.toFixed(4)}</p>
           <p><strong>APR:</strong> ${pool.apr.toFixed(2)}%</p>
-          <p><strong>Pool Price:</strong> ${pool.pool_price}</p>
+          <p><strong>Pool Price:</strong> ${pool.pool_price} SOL per ${pool.token_a_symbol}</p>
           <p><strong>Volume 24h:</strong> $${pool.volume24h}</p>
+          <p><strong>Liquidity Locked:</strong> ${pool.permanent_lock_liquidity <= 1 ? 'None': 'Yes'}</p>
           <p><strong>Fee Scheduler:</strong> ${pool.fee_scheduler_mode === 0 ? 'Linear' : 'Exponential'}</p>
           <p><strong>Fee 24h:</strong> $${pool.fee24h}</p>
-          <p><strong>Base Fee:</strong> ${pool.base_fee}%</p>
-          <p><strong>Dynamic Fee:</strong> ${pool.dynamic_fee}%</p>
+          <p><strong>Base Fee:</strong> ${pool.base_fee.toFixed(4)}%</p>
+          <p><strong>Dynamic Fee:</strong> ${pool.dynamic_fee.toFixed(4)}%</p>
           <p><strong>Collect Fee Token:</strong> ${collectFeeModes[pool.collect_fee_mode] || "Unknown"}</p>
+
+          <div class="button-group">
+            <a href="https://axiom.trade/meme/${pool.pool_address}" target="_blank" class="action-btn axiom">
+              <img src="assets/axiom.png" alt="Axiom"> Axiom
+            </a>
+            <a href="https://www.meteora.ag/dammv2/${pool.pool_address}" target="_blank" class="action-btn meteora">
+              <img src="assets/meteora.svg" alt="Meteora"> Meteora
+            </a>
+            <a href="https://t.me/met_engine_bot?start=M0FS99" target="_blank" class="action-btn telegram">
+              <img src="assets/metengine.svg" alt="Met Engine"> Met Engine
+            </a>
+          </div>
         </div>
       `).join("");
 
@@ -277,8 +337,18 @@
       try {
         const data = await fetchPools(tokenA, tokenB);
         poolsData = data.data || [];
-        if (poolsData.length) controls.style.display = "block";
-        renderPools(poolsData);
+        if (poolsData.length) {
+          controls.style.display = "block";
+          // sort by volume24h descending on load
+          poolsData.sort((a, b) => b.volume24h - a.volume24h);
+          renderPools(poolsData);
+          // set dropdowns to reflect the default sort
+          sortSelect.value = "volume24h";
+          orderSelect.value = "desc";
+        } else {
+          renderPools([]);
+        }
+
       } catch (err) {
         console.error(err);
         results.innerHTML = "<p style='text-align:center;'>Error fetching data.</p>";
